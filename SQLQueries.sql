@@ -1,4 +1,4 @@
--- How many Cars were sold in each state
+--Q1. How many Cars were sold in each state
 select	state,
 		count(*) as [Number of cars]
 from car_prices
@@ -7,8 +7,7 @@ group by state
 select * from car_prices
 where len(state ) >2;
 
--- Creating a temporary table to store Vaild car prices data
- -- Creating a temporary table to store valid car prices data
+ --Q2. Creating a temporary table to store valid car prices data
 SELECT 
     'year' AS Manufactor_Year,
     make,
@@ -48,11 +47,12 @@ INTO #Car_Prices_Valid
 FROM car_prices
 WHERE body != 'Navitgation'
     AND make != ''
-	AND saledate != '';
+	AND saledate != ''
+	And condition !='';
 
  
---drop table #Car_Prices_Valid
--- Which Kind of Cars are most popular ? | How many sales have been made for each make & model?
+-- drop table #Car_Prices_Valid
+--Q3. Which Kind of Cars are most popular ? | How many sales have been made for each make & model?
 select 
 make,
 model,
@@ -61,15 +61,13 @@ from #Car_Prices_Valid
 group by make,model
 order by count(*) desc
 
--- WHat is the AVG Sales Price for car for each state
+-- Q4. WHat is the AVG Sales Price for car for each state
 
 select state,
 AVG(sellingprice) AS [AVG Sales Price ]
 from #Car_Prices_Valid
 group by state
 order by AVG(sellingprice) ASC
-
-
 
 
 -- Avg Sales price for sold cars in each month and Year ?
@@ -79,7 +77,7 @@ from #Car_Prices_Valid
 group by state
 order by AVG(sellingprice) ASC
 
--- -- Avg Sales price for sold cars in each month and Year ?
+-- Q5. Avg Sales price for sold cars in each month and Year ?
 
 select	Sales_Year,
 		sale_month,
@@ -96,9 +94,74 @@ group by sale_month
 order by sale_month ASC;
 
 
--- Top 5 most selling models within each body type (Number of sales) ?
-select	make, model,body,
-		count(*) AS Number_of_sales
-FROM #Car_Prices_Valid
-Group BY make, model,body
-ORDER BY body,count(*) desc;
+--Q6 Top 5 most selling models within each body type (Number of sales)
+SELECT	make,
+		model, 
+		body, 
+		Number_of_sales, 
+		bodyRank
+FROM (
+    SELECT make, model, body,
+           COUNT(*) AS Number_of_sales,
+           RANK() OVER (PARTITION BY body ORDER BY COUNT(*) DESC) AS bodyRank
+    FROM #Car_Prices_Valid
+    GROUP BY make, model, body
+) AS ranked_models
+WHERE bodyRank <= 5
+ORDER BY body, Number_of_sales DESC;
+
+-- Q7 sales price higher than model average and How much higher
+select	make,
+		model,
+		vin,
+		Sales_Year,
+		sale_month, 
+		Sales_by_Day,
+		sellingprice, 
+		Avg_Model,
+		sellingprice / Avg_Model as Price_ratio  -- How much higher they are the avg
+from (
+select	make,
+		model,
+		vin,
+		Sales_Year,
+		sale_month, 
+		Sales_by_Day,
+		sellingprice, 
+		Avg(sellingprice) over (partition by make,model) As Avg_Model  	-- Avg for sub-groups of data 
+FROM #Car_Prices_Valid) As RankedModel
+where sellingprice > Avg_Model
+order by sellingprice / Avg_Model  desc;
+
+-- Q8 How does this condition impact the sales price and how many are sold ?
+select Car_Condition_buckets,
+		condition,
+		count(*) As Num_Sales,
+		AVG(sellingprice) AS Avg_sales_price
+	from (
+		select	
+			CASE
+				when condition between 0  and  9 then  '0 to 9'
+				when condition between 10 and 19 then '10 to 19'
+				when condition between 20 and 29 then '20 to 29'
+				when condition between 30 and 39 then '30 to 39'
+				when condition between 40 and 49 then '40 to 49'
+		END AS Car_Condition_buckets,
+				condition,
+				sellingprice
+	FROM #Car_Prices_Valid
+	) as subQuery
+group by Car_Condition_buckets,condition
+ORDER BY condition ASC;
+
+--  brand details NUmber of unique model that has been sold
+select	make,
+		count(distinct model)	  AS [Number of models],
+		count(*)		  AS [Number of Sales],
+		MIN(sellingprice) AS [Min price],
+		max(sellingprice) AS [Max price],
+		AVG(sellingprice) AS [AVG price] 
+from #Car_Prices_Valid
+group by make
+order by [AVG price] desc
+-- the top brands by the AVG price are Rolls-Royce, Ferrari and Lamborghini.
