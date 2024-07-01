@@ -155,6 +155,7 @@ group by Car_Condition_buckets,condition
 ORDER BY condition ASC;
 
 --  brand details NUmber of unique model that has been sold
+-- What is the highest, lowest, and average selling price for each brand, and how many different models are sold?
 select	make,
 		count(distinct model)	  AS [Number of models],
 		count(*)		  AS [Number of Sales],
@@ -164,4 +165,52 @@ select	make,
 from #Car_Prices_Valid
 group by make
 order by [AVG price] desc
--- the top brands by the AVG price are Rolls-Royce, Ferrari and Lamborghini.
+-->> the top brands by the AVG price are Rolls-Royce, Ferrari and Lamborghini.
+
+--Q10 cars sold multiple times . If so, what are the details of each sale?
+SELECT
+	Manufactor_Year,
+	make,
+	model,
+	trim,
+	body,
+	transmission,
+	vin,
+	state,
+	condition,
+	odometer,
+	color,
+	interior,
+	seller,
+	mmr,
+	sellingprice,
+	saledate,
+	Sales_Year,
+	sale_month,
+	Sales_by_Day,
+	vin_sales
+FROM (
+	select 	 Manufactor_Year ,
+			make,
+			model,
+			trim,
+			body,
+			transmission,
+			vin,
+			state,
+			condition,
+			odometer,
+			color,
+			interior,
+			seller,
+			mmr,
+			sellingprice,
+			saledate,
+			Sales_Year,
+			sale_month,
+			Sales_by_Day,
+			count(*) over (partition by vin) as vin_sales
+			from #Car_Prices_Valid
+) as ss
+WHERE vin_sales > 1
+ORDER BY vin ASC;
